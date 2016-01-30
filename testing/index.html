@@ -15,6 +15,116 @@
 <script src="js/leaflet-realtime.min.js"></script>
 <script>
     var map;
+    var firstData = true;
+
+    var requestData = function() {
+      var url = 'data.php';
+      if (!firstData) {
+        url += "?"+Date.now();
+      }
+      firstData = false;
+      L.Realtime.reqwest({
+        url: url,
+        type: 'html',
+      }).then(function(data) {
+        //console.log(data);
+        var lines = data.split("\n");
+
+        var timediff = 1136073600;
+        var merkkijono = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        // indeksi - 31 = arvo, V = 0, v‰li = -31 - 30
+
+        var points = [];
+
+        lines.forEach(function(line) {
+          var parts = line.split(".");
+          if (parts.length > 1) {
+            var loc = parts[1].split("_");
+            var timestamp, lon, lat;
+            if (loc.length == 3) {
+              timestamp = parseInt(loc[0]) + timediff;
+              lon = parseInt(loc[1])/50000;
+              lat = parseInt(loc[2])/100000;
+
+
+              if (typeof(points[parts[0]]) == 'undefined') {
+                points[parts[0]] = [];
+              }
+              points[parts[0]].push({timestamp: timestamp, lon: lon, lat: lat});
+
+              // gps2A11.310770025_1193182_6143367.XQZ.XQa.XQY.XPY.YPZ.YTV.67_-6_-7.YVV.940_17_3.ZWV.
+
+              if (parts.length > 2) {
+                var lasttime = parseInt(loc[0]);
+                var lastlon = parseInt(loc[1]);
+                var lastlat = parseInt(loc[2]);
+                for (var i = 2; typeof(parts[i]) != 'undefined'; i++) {
+                  if (parts[i].length == 3) {
+                    timestamp = lasttime + merkkijono.indexOf(parts[i][0]) + timediff;
+                    lasttime = timestamp - timediff;
+                    lon = lastlon + merkkijono.indexOf(parts[i][1]);
+                    lat = lastlat + merkkijono.indexOf(parts[i][2]);
+                    lastlon = lon;
+                    lastlat = lat;
+
+                    points[parts[0]].push({timestamp: timestamp, lon: lon, lat: lat});
+                  } else {
+                    // ...67_-6_-7...
+                    var nums = parts[i].split("_");
+                    if (nums.length == 3) {
+                      timestamp = lasttime + parseInt(nums[0]) + timediff;
+                      lasttime = timestamp - timediff;
+                      lon = lastlon + parseInt(nums[1]);
+                      lat = lastlat + parseInt(nums[2]);
+                      lastlon = lon;
+                      lastlat = lat;
+
+                      points[parts[0]].push({timestamp: timestamp, lon: lon, lat: lat});
+                    } else {
+                      // error
+                    }
+                  }
+                }
+              }
+            } else {
+              // error in line
+            }
+
+          } else {
+            // error / empty line
+          }
+        });
+
+        var latlngs = [];
+
+        points.forEach(function(runner) {
+          var route = [];
+          runner.forEach(function(point) {
+            route.push(L.latLng(point.lat, point.lon));
+          });
+
+          latlngs.push(route);
+        });
+
+        var multiLine = L.multiPolyline(latlngs, {
+          stroke: true,
+          color: '#f00',
+          weight: 4,
+          opacity: 0.8,
+          clickable: false
+        });
+
+        console.log("returning");
+        console.log(multiLine);
+        multiLine.addTo(map);
+        //success(multiLine);
+
+      }).catch(function(err) {
+        //error(err)
+        console.error(err);
+      });
+    };
+
     (function(){
       // basic Leaflet map setup
       map = new L.map('map').setView([61.455, 23.85], 13);
@@ -37,6 +147,12 @@
       ).addTo(map);
       L.DomEvent.on(img._image, 'load', img.editing.enable, img.editing);
     })();
+
+    requestData();
+    setInterval(function () {
+      requestData();
+    }, 100*1000);
+
   </script>
 </body>
 </html>
