@@ -106,7 +106,15 @@
           latlngs.push(route);
         });
 
-        var multiLine = L.multiPolyline(latlngs, {
+        points.forEach(function(runner, index) {
+          var route = [];
+          runner.forEach(function(point) {
+            route.push(L.latLng(point.lat, point.lon));
+          });
+          var polyline = L.polyline(route, {color: colorById(index)}).addTo(map);
+        });
+
+        /*var multiLine = L.multiPolyline(latlngs, {
           stroke: true,
           color: '#f00',
           weight: 4,
@@ -117,7 +125,7 @@
         console.log("returning");
         console.log(multiLine);
         multiLine.addTo(map);
-        //success(multiLine);
+        //success(multiLine);*/
 
       }).catch(function(err) {
         //error(err)
@@ -152,6 +160,37 @@
     setInterval(function () {
       requestData();
     }, 100*1000);
+
+    function colorById(index) {
+      var merkit = "qw=er?t´y+u'©i*o@på£äö$lk∞jh§gf|ds[az]xc≈vb!nm\"1#2%3-&45,6/7.8(9_)0";
+      var jaettu = index.toString().split("");
+      console.log(jaettu);
+      var tulos = 1;
+      jaettu.forEach(function (merkki, indeksi) {
+        console.log(merkki);
+        console.log(indeksi);
+        var kerroin = 1;
+        switch (indeksi % 3) {
+          case 0:
+            kerroin = 11;
+          case 1:
+            kerroin = 33;
+          case 2:
+            kerroin = 793;
+          default:
+            kerroin = 1;
+        }
+        //console.log(merkit.indexOf(merkki.toString())*kerroin);
+        tulos += merkit.indexOf(merkki.toString())*kerroin;
+        console.log(tulos);
+      });
+      console.log(tulos);
+      while (tulos.toString().length < 12) {
+        tulos = tulos*tulos;
+      }
+      var temp = tulos.toString(16);
+      return "#" + temp.substr(temp.length - 6);
+    }
 
   </script>
 </body>
